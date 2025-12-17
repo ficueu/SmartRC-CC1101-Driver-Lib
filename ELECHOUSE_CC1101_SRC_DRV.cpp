@@ -244,7 +244,7 @@ void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
   temp = addr | WRITE_BURST;
   digitalWrite(SS_PIN, LOW);
   //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low(MISO_PIN, 500)) {
+  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
     digitalWrite(SS_PIN, HIGH);
     return; // nie wisi -> nie ma WDT
   }
