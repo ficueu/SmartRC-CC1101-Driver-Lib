@@ -78,11 +78,12 @@ static inline int cc1101_read_level_fast_(uint8_t pin) {
 #endif
 }
 
-static bool cc1101_wait_miso_low_(uint8_t miso_pin, uint32_t timeout_ms) {
-  uint32_t t0 = millis();
-  while (cc1101_read_level_fast_(miso_pin)) {
-    if (millis() - t0 >= timeout_ms) return false;
-    delay(1);     // oddaj CPU -> nie będzie task_wdt
+bool cc1101_wait_miso_low_(int pin, uint32_t timeout_ms) {
+  uint32_t start = millis();
+  while (gpio_get_level((gpio_num_t)pin) != 0) {
+    if (millis() - start > timeout_ms) return false;
+    delay(1);               // albo vTaskDelay(1)
+    // opcjonalnie: esp_task_wdt_reset();
   }
   return true;
 }
@@ -115,13 +116,14 @@ void ELECHOUSE_CC1101::SpiStart(void)
   digitalWrite(SS_PIN, HIGH);
   digitalWrite(SCK_PIN, HIGH);   
   digitalWrite(MOSI_PIN, LOW);
+  digitalWrite(SS_PIN, HIGH);
 
   // enable SPI
-  // #ifdef ESP32
+  #ifdef ESP32
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
-  // #else
-  // SPI.begin();
-  // #endif
+  #else
+  SPI.begin();
+  #endif
 }
 /****************************************************************
 *FUNCTION NAME:SpiEnd
