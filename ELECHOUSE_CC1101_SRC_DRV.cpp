@@ -108,16 +108,19 @@ uint8_t PA_TABLE_915[10] {0x03,0x0E,0x1E,0x27,0x38,0x8E,0x84,0xCC,0xC3,0xC0,};  
 void ELECHOUSE_CC1101::SpiStart(void)
 {
   // initialize the SPI pins
+  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiStart MODE");
   pinMode(SCK_PIN, OUTPUT);
   pinMode(MOSI_PIN, OUTPUT);
   pinMode(MISO_PIN, INPUT);
   pinMode(SS_PIN, OUTPUT);
 
+  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiStart VALUE");
   digitalWrite(SS_PIN, HIGH);
   digitalWrite(SCK_PIN, HIGH);   
   digitalWrite(MOSI_PIN, LOW);
   digitalWrite(SS_PIN, HIGH);
 
+  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiStart BEGIN");
   // enable SPI
   #ifdef ESP32
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
@@ -215,19 +218,22 @@ void ELECHOUSE_CC1101::Init(void)
 void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
 {
   SpiStart();
+  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiWriteReg SpiStart=OK");
   digitalWrite(SS_PIN, LOW);
 
   // CC1101 sygnalizuje gotowość przez MISO low.
   // Na ESP32-C3 digitalRead() może być "inconsistent", więc czytamy poziom przez gpio_get_level().
   if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
     digitalWrite(SS_PIN, HIGH);
+    ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiWriteReg timeout");
     SpiEnd();
     // Opcjonalnie: log diagnostyczny (jeśli masz Serial/ESP_LOG w tym pliku)
     // Serial.println("CC1101: timeout waiting MISO low in SpiWriteReg");
     return;
   }
-
+  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiWriteReg SPI.transfer addr");
   SPI.transfer(addr);
+  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiWriteReg SPI.transfer val");
   SPI.transfer(value);
 
   digitalWrite(SS_PIN, HIGH);
