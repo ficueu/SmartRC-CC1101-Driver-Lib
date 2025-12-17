@@ -174,13 +174,13 @@ void ELECHOUSE_CC1101::Reset (void)
 	//while(digitalRead(MISO_PIN));
   if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
     digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
+    return 0; // nie wisi -> nie ma WDT
   }
   SPI.transfer(CC1101_SRES);
   //while(digitalRead(MISO_PIN));
   if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
     digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
+    return 0; // nie wisi -> nie ma WDT
   }
 	digitalWrite(SS_PIN, HIGH);
 }
@@ -214,7 +214,7 @@ void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
   //while(digitalRead(MISO_PIN));
   if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
     digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
+    return 0; // nie wisi -> nie ma WDT
   }
   SPI.transfer(addr);
   SPI.transfer(value); 
@@ -236,7 +236,7 @@ void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
   //while(digitalRead(MISO_PIN));
   if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
     digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
+    return 0; // nie wisi -> nie ma WDT
   }
   SPI.transfer(temp);
   for (i = 0; i < num; i++)
@@ -259,7 +259,7 @@ void ELECHOUSE_CC1101::SpiStrobe(byte strobe)
   //while(digitalRead(MISO_PIN));
   if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
     digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
+    return 0; // nie wisi -> nie ma WDT
   }
   SPI.transfer(strobe);
   digitalWrite(SS_PIN, HIGH);
@@ -280,7 +280,7 @@ byte ELECHOUSE_CC1101::SpiReadReg(byte addr)
   //while(digitalRead(MISO_PIN));
   if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
     digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
+    return 0; // nie wisi -> nie ma WDT
   }
   SPI.transfer(temp);
   value=SPI.transfer(0);
@@ -304,7 +304,7 @@ void ELECHOUSE_CC1101::SpiReadBurstReg(byte addr, byte *buffer, byte num)
   //while(digitalRead(MISO_PIN));
   if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
     digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
+    return 0; // nie wisi -> nie ma WDT
   }
   SPI.transfer(temp);
   for(i=0;i<num;i++)
@@ -330,7 +330,7 @@ byte ELECHOUSE_CC1101::SpiReadStatus(byte addr)
   //while(digitalRead(MISO_PIN));
   if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
     digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
+    return 0; // nie wisi -> nie ma WDT
   }
   SPI.transfer(temp);
   value=SPI.transfer(0);
