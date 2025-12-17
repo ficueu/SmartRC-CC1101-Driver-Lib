@@ -16,7 +16,9 @@ cc1101 Driver for RC Switch. Mod by Little Satan. With permission to modify and 
 #include <SPI.h>
 #include "ELECHOUSE_CC1101_SRC_DRV.h"
 #include <Arduino.h>
-
+#ifdef ESP32
+  #include "driver/gpio.h"
+#endif
 /****************************************************************/
 #define   WRITE_BURST       0x40            //write burst
 #define   READ_SINGLE       0x80            //read single
@@ -68,6 +70,27 @@ byte clb2[2]= {31,38};
 byte clb3[2]= {65,76};
 byte clb4[2]= {77,79};
 
+static inline int cc1101_read_pin_fast(int pin) {
+#ifdef ESP32
+  return gpio_get_level((gpio_num_t) pin);
+#else
+  return digitalRead(pin);
+#endif
+}
+
+static inline bool cc1101_wait_miso_low(uint8_t miso_pin, uint32_t timeout_us = 20000) {
+  uint32_t start = micros();
+  while (cc1101_read_pin_fast(miso_pin)) {
+    if ((uint32_t)(micros() - start) > timeout_us) return false;
+    // mikro-oddech żeby nie zabić WDT
+    delayMicroseconds(2);
+    // yield() jest bezpieczne w Arduino-ESP32
+    yield();
+  }
+  return true;
+}
+
+
 /****************************************************************/
 uint8_t PA_TABLE[8]     {0x00,0xC0,0x00,0x00,0x00,0x00,0x00,0x00};
 //                       -30  -20  -15  -10   0    5    7    10
@@ -91,9 +114,13 @@ void ELECHOUSE_CC1101::SpiStart(void)
   pinMode(MISO_PIN, INPUT);
   pinMode(SS_PIN, OUTPUT);
 
+  digitalWrite(SS_PIN, HIGH);
+  digitalWrite(SCK_PIN, HIGH);   
+  digitalWrite(MOSI_PIN, LOW);
+
   // enable SPI
   #ifdef ESP32
-  SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
+  SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, -1);
   #else
   SPI.begin();
   #endif
@@ -144,9 +171,17 @@ void ELECHOUSE_CC1101::Reset (void)
 	digitalWrite(SS_PIN, HIGH);
 	delay(1);
 	digitalWrite(SS_PIN, LOW);
-	while(digitalRead(MISO_PIN));
+	//while(digitalRead(MISO_PIN));
+  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+    digitalWrite(SS_PIN, HIGH);
+    return; // nie wisi -> nie ma WDT
+  }
   SPI.transfer(CC1101_SRES);
-  while(digitalRead(MISO_PIN));
+  //while(digitalRead(MISO_PIN));
+  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+    digitalWrite(SS_PIN, HIGH);
+    return; // nie wisi -> nie ma WDT
+  }
 	digitalWrite(SS_PIN, HIGH);
 }
 /****************************************************************
@@ -159,9 +194,9 @@ void ELECHOUSE_CC1101::Init(void)
 {
   setSpi();
   SpiStart();                   //spi initialization
-  digitalWrite(SS_PIN, HIGH);
-  digitalWrite(SCK_PIN, HIGH);
-  digitalWrite(MOSI_PIN, LOW);
+  // digitalWrite(SS_PIN, HIGH);
+  // digitalWrite(SCK_PIN, HIGH);
+  // digitalWrite(MOSI_PIN, LOW);
   Reset();                    //CC1101 reset
   RegConfigSettings();            //CC1101 register config
   SpiEnd();
@@ -176,7 +211,11 @@ void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
 {
   SpiStart();
   digitalWrite(SS_PIN, LOW);
-  while(digitalRead(MISO_PIN));
+  //while(digitalRead(MISO_PIN));
+  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+    digitalWrite(SS_PIN, HIGH);
+    return; // nie wisi -> nie ma WDT
+  }
   SPI.transfer(addr);
   SPI.transfer(value); 
   digitalWrite(SS_PIN, HIGH);
@@ -194,7 +233,11 @@ void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
   SpiStart();
   temp = addr | WRITE_BURST;
   digitalWrite(SS_PIN, LOW);
-  while(digitalRead(MISO_PIN));
+  //while(digitalRead(MISO_PIN));
+  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+    digitalWrite(SS_PIN, HIGH);
+    return; // nie wisi -> nie ma WDT
+  }
   SPI.transfer(temp);
   for (i = 0; i < num; i++)
   {
@@ -213,7 +256,11 @@ void ELECHOUSE_CC1101::SpiStrobe(byte strobe)
 {
   SpiStart();
   digitalWrite(SS_PIN, LOW);
-  while(digitalRead(MISO_PIN));
+  //while(digitalRead(MISO_PIN));
+  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+    digitalWrite(SS_PIN, HIGH);
+    return; // nie wisi -> nie ma WDT
+  }
   SPI.transfer(strobe);
   digitalWrite(SS_PIN, HIGH);
   SpiEnd();
@@ -230,7 +277,11 @@ byte ELECHOUSE_CC1101::SpiReadReg(byte addr)
   SpiStart();
   temp = addr| READ_SINGLE;
   digitalWrite(SS_PIN, LOW);
-  while(digitalRead(MISO_PIN));
+  //while(digitalRead(MISO_PIN));
+  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+    digitalWrite(SS_PIN, HIGH);
+    return; // nie wisi -> nie ma WDT
+  }
   SPI.transfer(temp);
   value=SPI.transfer(0);
   digitalWrite(SS_PIN, HIGH);
@@ -250,7 +301,11 @@ void ELECHOUSE_CC1101::SpiReadBurstReg(byte addr, byte *buffer, byte num)
   SpiStart();
   temp = addr | READ_BURST;
   digitalWrite(SS_PIN, LOW);
-  while(digitalRead(MISO_PIN));
+  //while(digitalRead(MISO_PIN));
+  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+    digitalWrite(SS_PIN, HIGH);
+    return; // nie wisi -> nie ma WDT
+  }
   SPI.transfer(temp);
   for(i=0;i<num;i++)
   {
@@ -272,7 +327,11 @@ byte ELECHOUSE_CC1101::SpiReadStatus(byte addr)
   SpiStart();
   temp = addr | READ_BURST;
   digitalWrite(SS_PIN, LOW);
-  while(digitalRead(MISO_PIN));
+  //while(digitalRead(MISO_PIN));
+  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+    digitalWrite(SS_PIN, HIGH);
+    return; // nie wisi -> nie ma WDT
+  }
   SPI.transfer(temp);
   value=SPI.transfer(0);
   digitalWrite(SS_PIN, HIGH);
