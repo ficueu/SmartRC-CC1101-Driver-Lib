@@ -16,9 +16,7 @@ cc1101 Driver for RC Switch. Mod by Little Satan. With permission to modify and 
 #include <SPI.h>
 #include "ELECHOUSE_CC1101_SRC_DRV.h"
 #include <Arduino.h>
-#ifdef ESP32
-  #include "driver/gpio.h"
-#endif
+
 /****************************************************************/
 #define   WRITE_BURST       0x40            //write burst
 #define   READ_SINGLE       0x80            //read single
@@ -70,26 +68,6 @@ byte clb2[2]= {31,38};
 byte clb3[2]= {65,76};
 byte clb4[2]= {77,79};
 
-static inline int cc1101_read_level_fast_(uint8_t pin) {
-#ifdef ESP32
-  return gpio_get_level((gpio_num_t)pin);
-#else
-  return digitalRead(pin);
-#endif
-}
-
-bool cc1101_wait_miso_low_(int pin, uint32_t timeout_ms) {
-  uint32_t start = millis();
-  while (gpio_get_level((gpio_num_t)pin) != 0) {
-    if (millis() - start > timeout_ms) return false;
-    delay(1);               // albo vTaskDelay(1)
-    // opcjonalnie: esp_task_wdt_reset();
-  }
-  return true;
-}
-
-
-
 /****************************************************************/
 uint8_t PA_TABLE[8]     {0x00,0xC0,0x00,0x00,0x00,0x00,0x00,0x00};
 //                       -30  -20  -15  -10   0    5    7    10
@@ -108,19 +86,11 @@ uint8_t PA_TABLE_915[10] {0x03,0x0E,0x1E,0x27,0x38,0x8E,0x84,0xCC,0xC3,0xC0,};  
 void ELECHOUSE_CC1101::SpiStart(void)
 {
   // initialize the SPI pins
-  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiStart MODE");
   pinMode(SCK_PIN, OUTPUT);
   pinMode(MOSI_PIN, OUTPUT);
   pinMode(MISO_PIN, INPUT);
   pinMode(SS_PIN, OUTPUT);
 
-  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiStart VALUE");
-  digitalWrite(SS_PIN, HIGH);
-  digitalWrite(SCK_PIN, HIGH);   
-  digitalWrite(MOSI_PIN, LOW);
-  digitalWrite(SS_PIN, HIGH);
-
-  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiStart BEGIN");
   // enable SPI
   #ifdef ESP32
   SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
@@ -128,7 +98,6 @@ void ELECHOUSE_CC1101::SpiStart(void)
   SPI.begin();
   #endif
   SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
-
 }
 /****************************************************************
 *FUNCTION NAME:SpiEnd
@@ -176,17 +145,9 @@ void ELECHOUSE_CC1101::Reset (void)
 	digitalWrite(SS_PIN, HIGH);
 	delay(1);
 	digitalWrite(SS_PIN, LOW);
-	//while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
-    digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
-  }
+	while(digitalRead(MISO_PIN));
   SPI.transfer(CC1101_SRES);
-  //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
-    digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
-  }
+  while(digitalRead(MISO_PIN));
 	digitalWrite(SS_PIN, HIGH);
 }
 /****************************************************************
@@ -197,18 +158,13 @@ void ELECHOUSE_CC1101::Reset (void)
 ****************************************************************/
 void ELECHOUSE_CC1101::Init(void)
 {
-  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 stage1");
   setSpi();
-  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 stage2");
   SpiStart();                   //spi initialization
-  // digitalWrite(SS_PIN, HIGH);
-  // digitalWrite(SCK_PIN, HIGH);
-  // digitalWrite(MOSI_PIN, LOW);
-  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 stage3");
+  digitalWrite(SS_PIN, HIGH);
+  digitalWrite(SCK_PIN, HIGH);
+  digitalWrite(MOSI_PIN, LOW);
   Reset();                    //CC1101 reset
-  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 stage4");
   RegConfigSettings();            //CC1101 register config
-  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 stage5");
   SpiEnd();
 }
 /****************************************************************
@@ -219,27 +175,13 @@ void ELECHOUSE_CC1101::Init(void)
 ****************************************************************/
 void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
 {
-  //SpiStart();
-  //ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiWriteReg SpiStart=OK");
+  SpiStart();
   digitalWrite(SS_PIN, LOW);
-
-  // CC1101 sygnalizuje gotowość przez MISO low.
-  // Na ESP32-C3 digitalRead() może być "inconsistent", więc czytamy poziom przez gpio_get_level().
-  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
-    digitalWrite(SS_PIN, HIGH);
-    ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiWriteReg timeout");
-    SpiEnd();
-    // Opcjonalnie: log diagnostyczny (jeśli masz Serial/ESP_LOG w tym pliku)
-    // Serial.println("CC1101: timeout waiting MISO low in SpiWriteReg");
-    return;
-  }
-  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiWriteReg SPI.transfer addr");
+  while(digitalRead(MISO_PIN));
   SPI.transfer(addr);
-  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiWriteReg SPI.transfer val");
-  SPI.transfer(value);
-
+  SPI.transfer(value); 
   digitalWrite(SS_PIN, HIGH);
-  //SpiEnd();
+  SpiEnd();
 }
 /****************************************************************
 *FUNCTION NAME:SpiWriteBurstReg
@@ -250,21 +192,17 @@ void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
 void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
 {
   byte i, temp;
-  //SpiStart();
+  SpiStart();
   temp = addr | WRITE_BURST;
   digitalWrite(SS_PIN, LOW);
-  //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
-    digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
-  }
+  while(digitalRead(MISO_PIN));
   SPI.transfer(temp);
   for (i = 0; i < num; i++)
   {
   SPI.transfer(buffer[i]);
   }
   digitalWrite(SS_PIN, HIGH);
-  //SpiEnd();
+  SpiEnd();
 }
 /****************************************************************
 *FUNCTION NAME:SpiStrobe
@@ -274,16 +212,12 @@ void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
 ****************************************************************/
 void ELECHOUSE_CC1101::SpiStrobe(byte strobe)
 {
-  //SpiStart();
+  SpiStart();
   digitalWrite(SS_PIN, LOW);
-  //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
-    digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
-  }
+  while(digitalRead(MISO_PIN));
   SPI.transfer(strobe);
   digitalWrite(SS_PIN, HIGH);
-  //SpiEnd();
+  SpiEnd();
 }
 /****************************************************************
 *FUNCTION NAME:SpiReadReg
@@ -294,18 +228,14 @@ void ELECHOUSE_CC1101::SpiStrobe(byte strobe)
 byte ELECHOUSE_CC1101::SpiReadReg(byte addr) 
 {
   byte temp, value;
-  //SpiStart();
+  SpiStart();
   temp = addr| READ_SINGLE;
   digitalWrite(SS_PIN, LOW);
-  //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
-    digitalWrite(SS_PIN, HIGH);
-    return 0; // nie wisi -> nie ma WDT
-  }
+  while(digitalRead(MISO_PIN));
   SPI.transfer(temp);
   value=SPI.transfer(0);
   digitalWrite(SS_PIN, HIGH);
-  //SpiEnd();
+  SpiEnd();
   return value;
 }
 
@@ -318,21 +248,17 @@ byte ELECHOUSE_CC1101::SpiReadReg(byte addr)
 void ELECHOUSE_CC1101::SpiReadBurstReg(byte addr, byte *buffer, byte num)
 {
   byte i,temp;
-  //SpiStart();
+  SpiStart();
   temp = addr | READ_BURST;
   digitalWrite(SS_PIN, LOW);
-  //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
-    digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
-  }
+  while(digitalRead(MISO_PIN));
   SPI.transfer(temp);
   for(i=0;i<num;i++)
   {
   buffer[i]=SPI.transfer(0);
   }
   digitalWrite(SS_PIN, HIGH);
-  //SpiEnd();
+  SpiEnd();
 }
 
 /****************************************************************
@@ -344,18 +270,14 @@ void ELECHOUSE_CC1101::SpiReadBurstReg(byte addr, byte *buffer, byte num)
 byte ELECHOUSE_CC1101::SpiReadStatus(byte addr) 
 {
   byte value,temp;
-  //SpiStart();
+  SpiStart();
   temp = addr | READ_BURST;
   digitalWrite(SS_PIN, LOW);
-  //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
-    digitalWrite(SS_PIN, HIGH);
-    return 0; // nie wisi -> nie ma WDT
-  }
+  while(digitalRead(MISO_PIN));
   SPI.transfer(temp);
   value=SPI.transfer(0);
   digitalWrite(SS_PIN, HIGH);
-  //SpiEnd();
+  SpiEnd();
   return value;
 }
 /****************************************************************
@@ -1107,15 +1029,12 @@ else{m4DaRa = calc; i=1;}
 *INPUT        :none
 *OUTPUT       :none
 ****************************************************************/
-void ELECHOUSE_CC1101::RegConfigSettings(void)
+void ELECHOUSE_CC1101::RegConfigSettings(void) 
 {   
-    ESP_LOGE("wmbus", "RegConfigSettings stage0");
     SpiWriteReg(CC1101_FSCTRL1,  0x06);
-    ESP_LOGE("wmbus", "RegConfigSettings stage1");
+    
     setCCMode(ccmode);
-    ESP_LOGE("wmbus", "RegConfigSettings stage2");
     setMHZ(MHz);
-    ESP_LOGE("wmbus", "RegConfigSettings stage3");
     
     SpiWriteReg(CC1101_MDMCFG1,  0x02);
     SpiWriteReg(CC1101_MDMCFG0,  0xF8);
@@ -1139,7 +1058,6 @@ void ELECHOUSE_CC1101::RegConfigSettings(void)
     SpiWriteReg(CC1101_PKTCTRL1, 0x04);
     SpiWriteReg(CC1101_ADDR,     0x00);
     SpiWriteReg(CC1101_PKTLEN,   0x00);
-    ESP_LOGE("wmbus", "RegConfigSettings stage4");
 }
 /****************************************************************
 *FUNCTION NAME:SetTx
