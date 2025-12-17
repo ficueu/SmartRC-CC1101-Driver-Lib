@@ -78,7 +78,7 @@ static inline int cc1101_read_level_fast_(uint8_t pin) {
 #endif
 }
 
-static bool cc1101_wait_miso_low_(uint8_t miso_pin, uint32_t timeout_ms) {
+static bool cc1101_wait_miso_low(uint8_t miso_pin, uint32_t timeout_ms) {
   uint32_t t0 = millis();
   while (cc1101_read_level_fast_(miso_pin)) {
     if (millis() - t0 >= timeout_ms) return false;
