@@ -217,8 +217,8 @@ void ELECHOUSE_CC1101::Init(void)
 ****************************************************************/
 void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
 {
-  SpiStart();
-  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiWriteReg SpiStart=OK");
+  //SpiStart();
+  //ESP_LOGE("wmbus", "ELECHOUSE_CC1101 SpiWriteReg SpiStart=OK");
   digitalWrite(SS_PIN, LOW);
 
   // CC1101 sygnalizuje gotowość przez MISO low.
@@ -237,7 +237,7 @@ void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
   SPI.transfer(value);
 
   digitalWrite(SS_PIN, HIGH);
-  SpiEnd();
+  //SpiEnd();
 }
 /****************************************************************
 *FUNCTION NAME:SpiWriteBurstReg
