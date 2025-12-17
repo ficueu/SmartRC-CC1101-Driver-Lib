@@ -216,11 +216,11 @@ void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
 {
   SpiStart();
   digitalWrite(SS_PIN, LOW);
-  //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
-    digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
-  }
+  while(digitalRead(MISO_PIN));
+  // if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+  //   digitalWrite(SS_PIN, HIGH);
+  //   return; // nie wisi -> nie ma WDT
+  // }
   SPI.transfer(addr);
   SPI.transfer(value); 
   digitalWrite(SS_PIN, HIGH);
@@ -238,11 +238,11 @@ void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
   SpiStart();
   temp = addr | WRITE_BURST;
   digitalWrite(SS_PIN, LOW);
-  //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
-    digitalWrite(SS_PIN, HIGH);
-    return; // nie wisi -> nie ma WDT
-  }
+  while(digitalRead(MISO_PIN));
+  // if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+  //   digitalWrite(SS_PIN, HIGH);
+  //   return; // nie wisi -> nie ma WDT
+  // }
   SPI.transfer(temp);
   for (i = 0; i < num; i++)
   {
@@ -1092,8 +1092,9 @@ else{m4DaRa = calc; i=1;}
 *INPUT        :none
 *OUTPUT       :none
 ****************************************************************/
-void ELECHOUSE_CC1101::RegConfigSettings(void) 
+void ELECHOUSE_CC1101::RegConfigSettings(void)
 {   
+    ESP_LOGE("wmbus", "RegConfigSettings stage0");
     SpiWriteReg(CC1101_FSCTRL1,  0x06);
     ESP_LOGE("wmbus", "RegConfigSettings stage1");
     setCCMode(ccmode);
