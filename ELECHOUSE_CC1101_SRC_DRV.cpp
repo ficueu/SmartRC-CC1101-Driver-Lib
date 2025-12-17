@@ -119,11 +119,11 @@ void ELECHOUSE_CC1101::SpiStart(void)
   digitalWrite(MOSI_PIN, LOW);
 
   // enable SPI
-  #ifdef ESP32
-  SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, -1);
-  #else
-  SPI.begin();
-  #endif
+  // #ifdef ESP32
+  SPI.begin(SCK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
+  // #else
+  // SPI.begin();
+  // #endif
 }
 /****************************************************************
 *FUNCTION NAME:SpiEnd
