@@ -115,6 +115,8 @@ class ELECHOUSE_CC1101
 {
 private:
   void SpiStart(void);
+  void SpiStop(void);
+  void SpiBegin(void);
   void SpiEnd(void);
   void GDO_Set (void);
   void GDO0_Set (void);
