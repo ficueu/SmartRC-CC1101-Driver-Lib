@@ -1095,9 +1095,11 @@ else{m4DaRa = calc; i=1;}
 void ELECHOUSE_CC1101::RegConfigSettings(void) 
 {   
     SpiWriteReg(CC1101_FSCTRL1,  0x06);
-    
+    ESP_LOGE("wmbus", "RegConfigSettings stage1");
     setCCMode(ccmode);
+    ESP_LOGE("wmbus", "RegConfigSettings stage2");
     setMHZ(MHz);
+    ESP_LOGE("wmbus", "RegConfigSettings stage3");
     
     SpiWriteReg(CC1101_MDMCFG1,  0x02);
     SpiWriteReg(CC1101_MDMCFG0,  0xF8);
@@ -1121,6 +1123,7 @@ void ELECHOUSE_CC1101::RegConfigSettings(void)
     SpiWriteReg(CC1101_PKTCTRL1, 0x04);
     SpiWriteReg(CC1101_ADDR,     0x00);
     SpiWriteReg(CC1101_PKTLEN,   0x00);
+    ESP_LOGE("wmbus", "RegConfigSettings stage4");
 }
 /****************************************************************
 *FUNCTION NAME:SetTx
