@@ -108,6 +108,9 @@ void ELECHOUSE_CC1101::SpiStop(void)
 ****************************************************************/
 void ELECHOUSE_CC1101::SpiStart(void)
 {
+  digitalWrite(SS_PIN, HIGH);
+  SPI.endTransaction();
+
   SPI.beginTransaction(SPISettings(4000000, MSBFIRST, SPI_MODE0));
   digitalWrite(SS_PIN, LOW);
 }
