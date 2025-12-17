@@ -192,13 +192,18 @@ void ELECHOUSE_CC1101::Reset (void)
 ****************************************************************/
 void ELECHOUSE_CC1101::Init(void)
 {
+  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 stage1");
   setSpi();
+  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 stage2");
   SpiStart();                   //spi initialization
   // digitalWrite(SS_PIN, HIGH);
   // digitalWrite(SCK_PIN, HIGH);
   // digitalWrite(MOSI_PIN, LOW);
+  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 stage3");
   Reset();                    //CC1101 reset
+  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 stage4");
   RegConfigSettings();            //CC1101 register config
+  ESP_LOGE("wmbus", "ELECHOUSE_CC1101 stage5");
   SpiEnd();
 }
 /****************************************************************
