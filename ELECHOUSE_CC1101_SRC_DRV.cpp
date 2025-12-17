@@ -70,25 +70,23 @@ byte clb2[2]= {31,38};
 byte clb3[2]= {65,76};
 byte clb4[2]= {77,79};
 
-static inline int cc1101_read_pin_fast(int pin) {
+static inline int cc1101_read_level_fast_(uint8_t pin) {
 #ifdef ESP32
-  return gpio_get_level((gpio_num_t) pin);
+  return gpio_get_level((gpio_num_t)pin);
 #else
   return digitalRead(pin);
 #endif
 }
 
-static inline bool cc1101_wait_miso_low(uint8_t miso_pin, uint32_t timeout_us = 20000) {
-  uint32_t start = micros();
-  while (cc1101_read_pin_fast(miso_pin)) {
-    if ((uint32_t)(micros() - start) > timeout_us) return false;
-    // mikro-oddech żeby nie zabić WDT
-    delayMicroseconds(2);
-    // yield() jest bezpieczne w Arduino-ESP32
-    yield();
+static bool cc1101_wait_miso_low_(uint8_t miso_pin, uint32_t timeout_ms) {
+  uint32_t t0 = millis();
+  while (cc1101_read_level_fast_(miso_pin)) {
+    if (millis() - t0 >= timeout_ms) return false;
+    delay(1);     // oddaj CPU -> nie będzie task_wdt
   }
   return true;
 }
+
 
 
 /****************************************************************/
@@ -216,13 +214,20 @@ void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
 {
   SpiStart();
   digitalWrite(SS_PIN, LOW);
-  while(digitalRead(MISO_PIN));
-  // if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
-  //   digitalWrite(SS_PIN, HIGH);
-  //   return; // nie wisi -> nie ma WDT
-  // }
+
+  // CC1101 sygnalizuje gotowość przez MISO low.
+  // Na ESP32-C3 digitalRead() może być "inconsistent", więc czytamy poziom przez gpio_get_level().
+  if (!cc1101_wait_miso_low_(MISO_PIN, 50)) {
+    digitalWrite(SS_PIN, HIGH);
+    SpiEnd();
+    // Opcjonalnie: log diagnostyczny (jeśli masz Serial/ESP_LOG w tym pliku)
+    // Serial.println("CC1101: timeout waiting MISO low in SpiWriteReg");
+    return;
+  }
+
   SPI.transfer(addr);
-  SPI.transfer(value); 
+  SPI.transfer(value);
+
   digitalWrite(SS_PIN, HIGH);
   SpiEnd();
 }
