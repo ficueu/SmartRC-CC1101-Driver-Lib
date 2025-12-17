@@ -78,7 +78,7 @@ static inline int cc1101_read_level_fast_(uint8_t pin) {
 #endif
 }
 
-static bool cc1101_wait_miso_low(uint8_t miso_pin, uint32_t timeout_ms) {
+static bool cc1101_wait_miso_low_(uint8_t miso_pin, uint32_t timeout_ms) {
   uint32_t t0 = millis();
   while (cc1101_read_level_fast_(miso_pin)) {
     if (millis() - t0 >= timeout_ms) return false;
@@ -170,13 +170,13 @@ void ELECHOUSE_CC1101::Reset (void)
 	delay(1);
 	digitalWrite(SS_PIN, LOW);
 	//while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
     digitalWrite(SS_PIN, HIGH);
     return; // nie wisi -> nie ma WDT
   }
   SPI.transfer(CC1101_SRES);
   //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
     digitalWrite(SS_PIN, HIGH);
     return; // nie wisi -> nie ma WDT
   }
@@ -217,7 +217,7 @@ void ELECHOUSE_CC1101::SpiWriteReg(byte addr, byte value)
 
   // CC1101 sygnalizuje gotowość przez MISO low.
   // Na ESP32-C3 digitalRead() może być "inconsistent", więc czytamy poziom przez gpio_get_level().
-  if (!cc1101_wait_miso_low_(MISO_PIN, 50)) {
+  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
     digitalWrite(SS_PIN, HIGH);
     SpiEnd();
     // Opcjonalnie: log diagnostyczny (jeśli masz Serial/ESP_LOG w tym pliku)
@@ -243,11 +243,11 @@ void ELECHOUSE_CC1101::SpiWriteBurstReg(byte addr, byte *buffer, byte num)
   SpiStart();
   temp = addr | WRITE_BURST;
   digitalWrite(SS_PIN, LOW);
-  while(digitalRead(MISO_PIN));
-  // if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
-  //   digitalWrite(SS_PIN, HIGH);
-  //   return; // nie wisi -> nie ma WDT
-  // }
+  //while(digitalRead(MISO_PIN));
+  if (!cc1101_wait_miso_low(MISO_PIN, 500)) {
+    digitalWrite(SS_PIN, HIGH);
+    return; // nie wisi -> nie ma WDT
+  }
   SPI.transfer(temp);
   for (i = 0; i < num; i++)
   {
@@ -267,7 +267,7 @@ void ELECHOUSE_CC1101::SpiStrobe(byte strobe)
   SpiStart();
   digitalWrite(SS_PIN, LOW);
   //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
     digitalWrite(SS_PIN, HIGH);
     return; // nie wisi -> nie ma WDT
   }
@@ -288,7 +288,7 @@ byte ELECHOUSE_CC1101::SpiReadReg(byte addr)
   temp = addr| READ_SINGLE;
   digitalWrite(SS_PIN, LOW);
   //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
     digitalWrite(SS_PIN, HIGH);
     return 0; // nie wisi -> nie ma WDT
   }
@@ -312,7 +312,7 @@ void ELECHOUSE_CC1101::SpiReadBurstReg(byte addr, byte *buffer, byte num)
   temp = addr | READ_BURST;
   digitalWrite(SS_PIN, LOW);
   //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
     digitalWrite(SS_PIN, HIGH);
     return; // nie wisi -> nie ma WDT
   }
@@ -338,7 +338,7 @@ byte ELECHOUSE_CC1101::SpiReadStatus(byte addr)
   temp = addr | READ_BURST;
   digitalWrite(SS_PIN, LOW);
   //while(digitalRead(MISO_PIN));
-  if (!cc1101_wait_miso_low(MISO_PIN, 20000)) {
+  if (!cc1101_wait_miso_low_(MISO_PIN, 500)) {
     digitalWrite(SS_PIN, HIGH);
     return 0; // nie wisi -> nie ma WDT
   }
