@@ -344,7 +344,7 @@ void ELECHOUSE_CC1101::SpiReadBurstReg(byte addr, byte *buffer, byte num)
 byte ELECHOUSE_CC1101::SpiReadStatus(byte addr) 
 {
   byte value,temp;
-  SpiStart();
+  //SpiStart();
   temp = addr | READ_BURST;
   digitalWrite(SS_PIN, LOW);
   //while(digitalRead(MISO_PIN));
@@ -355,7 +355,7 @@ byte ELECHOUSE_CC1101::SpiReadStatus(byte addr)
   SPI.transfer(temp);
   value=SPI.transfer(0);
   digitalWrite(SS_PIN, HIGH);
-  SpiEnd();
+  //SpiEnd();
   return value;
 }
 /****************************************************************
